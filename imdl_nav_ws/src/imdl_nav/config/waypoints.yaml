@@ -1,0 +1,15 @@
+# Points for:  ros2 run imdl_nav waypoints
+#
+# x, y in meters in the 'map' frame ((0, 0) = start pose of the mapping run)
+# yaw in degrees, counter-clockwise (0 = heading at the start of the mapping run)
+# Keep points at least 0.3 m away from walls.
+#
+# Tip: read coordinates in RViz with the "Publish Point" tool while
+#      ros2 topic echo /clicked_point  is running.
+
+repeat: 1           # how many times the whole list is driven
+
+waypoints:
+  - {name: A,     x: 1.0, y:  0.0, yaw:   0}
+  - {name: B,     x: 1.0, y:  0.5, yaw:  90}
+  - {name: Start, x: 0.0, y:  0.0, yaw:   0}

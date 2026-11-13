@@ -1,0 +1,31 @@
+# Parameters for slam_toolbox (runs on the Jetson, started by mapping.launch.py).
+
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: false
+    mode: mapping                 # build a new map
+
+    # Where does the data come from?
+    scan_topic: /scan             # time-corrected scan from scan_restamper
+    odom_frame: odom              # odom -> base_link comes from odom_to_tf
+    map_frame: map                # slam_toolbox publishes map -> odom
+    base_frame: base_link
+
+    # Map
+    resolution: 0.03              # size of one grid cell: 3 cm
+    max_laser_range: 3.0         # ignore readings farther away (m)
+    map_update_interval: 0.1      # republish /map every 2 s
+
+    # When is a new node (pose + scan) added to the graph?
+    minimum_travel_distance: 0.10 # after 10 cm of driving ...
+    minimum_travel_heading: 0.10  # ... or 0.1 rad (about 6 degrees) of turning
+    minimum_time_interval: 0.5
+
+    # Loop closure: recognize known places and correct the accumulated error
+    do_loop_closing: true
+    loop_search_maximum_distance: 4.0
+
+    # TF
+    transform_timeout: 1.0
+    tf_buffer_duration: 30.0
+    use_map_saver: false

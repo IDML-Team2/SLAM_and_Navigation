@@ -1,0 +1,48 @@
+<!--
+  Behavior tree for "drive to a pose" (used by bt_navigator, see navigation.launch.py).
+
+  How to read it (from the outside in):
+    RecoveryNode       try the first child; if it fails, run the second child (the recovery)
+                       and try again – at most number_of_retries times.
+    PipelineSequence   run its children side by side: plan AND follow the path at the same time.
+    RateController     run its child only hz times per second (re-plan twice per second).
+    ReactiveFallback   GoalUpdated: if a new goal arrives, skip the recovery.
+    RoundRobin         each failure uses the next recovery: clear costmaps, spin a little, wait.
+
+  The names GridBased, FollowPath and general_goal_checker must match config/nav2.yaml.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="4" name="NavigateRecovery">
+
+      <PipelineSequence name="NavigateWithReplanning">
+        <!-- 1. plan a path to the goal, re-plan twice per second -->
+        <RateController hz="2.0">
+          <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+            <ClearEntireCostmap name="ClearGlobalContext" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </RecoveryNode>
+        </RateController>
+        <!-- 2. follow the path -->
+        <RecoveryNode number_of_retries="1" name="FollowPath">
+          <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="general_goal_checker"/>
+          <ClearEntireCostmap name="ClearLocalContext" service_name="local_costmap/clear_entirely_local_costmap"/>
+        </RecoveryNode>
+      </PipelineSequence>
+
+      <!-- 3. if planning or following failed: recover, then try again -->
+      <ReactiveFallback name="RecoveryFallback">
+        <GoalUpdated/>
+        <RoundRobin name="RecoveryActions">
+          <Sequence name="ClearBothCostmaps">
+            <ClearEntireCostmap name="ClearLocalRecovery" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <ClearEntireCostmap name="ClearGlobalRecovery" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </Sequence>
+          <Spin spin_dist="0.52"/>          <!-- turn about 30 degrees -->
+          <Wait wait_duration="1"/>         <!-- wait 1 second -->
+        </RoundRobin>
+      </ReactiveFallback>
+
+    </RecoveryNode>
+  </BehaviorTree>
+</root>
