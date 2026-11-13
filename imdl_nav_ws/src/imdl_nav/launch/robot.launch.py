@@ -21,6 +21,7 @@ import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
+from launch.conditions import UnlessCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -50,7 +51,8 @@ def robot_nodes(context):
             package='imdl_nav',
             executable='odom_to_tf',
             name='odom_to_tf',
-            parameters=[{'odom_topic': namespace + '/odom'}],
+            parameters=[{'odom_topic': namespace + '/odom',
+                         'use_sim_time': LaunchConfiguration('use_sim_time')}],
             output='screen',
         ),
         # Fixed transform base_link -> laser
@@ -83,6 +85,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_config', default_value=os.path.join(share, 'config', 'robot.yaml'),
             description='Robot geometry file (lidar position, robot size).'),
+        DeclareLaunchArgument(
+            'sim', default_value='false',
+            description='Simulator: skip the lidar driver and scan_restamper (the sim publishes /scan).'),
+        DeclareLaunchArgument(
+            'use_sim_time', default_value='false',
+            description='Use the simulator clock (/clock).'),
 
         # Lidar driver. It actually publishes on "scan"; the remapping
         # redirects that to /scan_raw.
@@ -100,6 +108,7 @@ def generate_launch_description():
             }],
             remappings=[('scan', '/scan_raw')],
             output='screen',
+            condition=UnlessCondition(LaunchConfiguration('sim')),
         ),
 
         Node(
@@ -107,6 +116,7 @@ def generate_launch_description():
             executable='scan_restamper',
             name='scan_restamper',
             output='screen',
+            condition=UnlessCondition(LaunchConfiguration('sim')),
         ),
 
         OpaqueFunction(function=robot_nodes),

@@ -97,6 +97,8 @@ def nodes(context):
     to_smoother = odom + [('cmd_vel', 'cmd_vel_nav')]
     smoother = odom + [('cmd_vel', 'cmd_vel_nav'), ('cmd_vel_smoothed', namespace + '/cmd_vel')]
     behavior_tree = os.path.join(share, 'behavior_trees', 'navigate.xml')
+    use_sim_time = LaunchConfiguration('use_sim_time').perform(context) == 'true'
+    sim_time = {'use_sim_time': use_sim_time}
 
     initial_pose = {
         'initial_pose.x': float(LaunchConfiguration('initial_x').perform(context)),
@@ -116,29 +118,29 @@ def nodes(context):
                     f'commands {namespace}/cmd_vel)'),
         LogInfo(msg=summary),
         Node(package='nav2_map_server', executable='map_server', name='map_server',
-             parameters=[params, {'yaml_filename': LaunchConfiguration('map')}],
+             parameters=[params, {'yaml_filename': LaunchConfiguration('map')}, sim_time],
              output='screen'),
         Node(package='nav2_amcl', executable='amcl', name='amcl',
-             parameters=[params, initial_pose],
+             parameters=[params, initial_pose, sim_time],
              output='screen'),
         Node(package='nav2_planner', executable='planner_server', name='planner_server',
-             parameters=[params],
+             parameters=[params, sim_time],
              output='screen'),
         Node(package='nav2_controller', executable='controller_server', name='controller_server',
-             parameters=[params], remappings=to_smoother,
+             parameters=[params, sim_time], remappings=to_smoother,
              output='screen'),
         Node(package='nav2_behaviors', executable='behavior_server', name='behavior_server',
-             parameters=[params], remappings=to_smoother,
+             parameters=[params, sim_time], remappings=to_smoother,
              output='screen'),
         Node(package='nav2_velocity_smoother', executable='velocity_smoother', name='velocity_smoother',
-             parameters=[params], remappings=smoother,
+             parameters=[params, sim_time], remappings=smoother,
              output='screen'),
         Node(package='nav2_bt_navigator', executable='bt_navigator', name='bt_navigator',
-             parameters=[params, {'default_nav_to_pose_bt_xml': behavior_tree}], remappings=odom,
-             output='screen'),
+             parameters=[params, {'default_nav_to_pose_bt_xml': behavior_tree}, sim_time],
+             remappings=odom, output='screen'),
         Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
              name='lifecycle_manager_navigation',
-             parameters=[{'use_sim_time': False, 'autostart': True,
+             parameters=[{'use_sim_time': use_sim_time, 'autostart': True,
                           'node_names': lifecycle_nodes}],
              output='screen'),
     ]
@@ -162,5 +164,7 @@ def generate_launch_description():
             'initial_y', default_value='0.0', description='Start position y (m).'),
         DeclareLaunchArgument(
             'initial_yaw', default_value='0.0', description='Start heading (degrees).'),
+        DeclareLaunchArgument(
+            'use_sim_time', default_value='false', description='Use the simulator clock (/clock).'),
         OpaqueFunction(function=nodes),
     ])

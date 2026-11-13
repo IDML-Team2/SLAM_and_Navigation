@@ -83,13 +83,15 @@ def nodes(context):
     with open(LaunchConfiguration('robot_config').perform(context)) as f:
         robot_config = yaml.safe_load(f)
     urdf, source = robot_description(robot_config)
+    sim_time = {'use_sim_time': LaunchConfiguration('use_sim_time').perform(context) == 'true'}
     return [
         LogInfo(msg=f'Robot model: {source}, lidar position from robot.yaml'),
         Node(package='robot_state_publisher', executable='robot_state_publisher',
-             name='robot_model_publisher', parameters=[{'robot_description': urdf}],
+             name='robot_model_publisher', parameters=[{'robot_description': urdf}, sim_time],
              output='screen'),
         Node(package='rviz2', executable='rviz2', name='rviz2',
-             arguments=['-d', os.path.join(share, 'rviz', 'imdl_nav.rviz')], output='screen'),
+             arguments=['-d', os.path.join(share, 'rviz', 'imdl_nav.rviz')],
+             parameters=[sim_time], output='screen'),
     ]
 
 
@@ -99,5 +101,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_config', default_value=os.path.join(share, 'config', 'robot.yaml'),
             description='Robot file (lidar position for the robot model).'),
+        DeclareLaunchArgument(
+            'use_sim_time', default_value='false', description='Use the simulator clock (/clock).'),
         OpaqueFunction(function=nodes),
     ])
