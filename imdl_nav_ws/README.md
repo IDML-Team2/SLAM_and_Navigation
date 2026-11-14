@@ -62,3 +62,40 @@ ros2 launch imdl_nav navigation.launch.py map:=$HOME/maps/my_map.yaml
 ros2 run imdl_nav go_to 1.0 0.5 90          # x [m], y [m], heading [degrees]
 ros2 run imdl_nav waypoints                 # points from config/waypoints.yaml
 ```
+
+## Simulation
+
+Everything runs on the PC, no Jetson. The simulator must publish `/clock`,
+`/scan` (frame `laser`) and `<namespace>/odom`, and listen on `<namespace>/cmd_vel`.
+
+| Argument | Used by | Why |
+| --- | --- | --- |
+| `sim:=true` | `robot.launch.py`, `mapping.launch.py` | no lidar driver, the simulator publishes `/scan` |
+| `use_sim_time:=true` | all launch files | use the simulator clock |
+| `namespace:=/<ns>` | `robot`, `mapping`, `navigation` | only if the simulated robot's namespace is not the one in `robot.yaml` |
+
+Build a map:
+
+```bash
+# PC, terminal 1 – simulator running
+ros2 launch imdl_nav mapping.launch.py sim:=true use_sim_time:=true
+# PC, terminal 2
+ros2 launch imdl_nav rviz.launch.py use_sim_time:=true
+# PC, terminal 3
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/Robi2/cmd_vel
+# PC, terminal 4, when the map is done (SLAM still running!)
+ros2 run nav2_map_server map_saver_cli -f ~/maps/sim_map --free 0.196 --ros-args -p save_map_timeout:=20.0 -p use_sim_time:=true
+```
+
+Drive to coordinates:
+
+```bash
+# PC, terminal 1 (stop mapping.launch.py first!)
+ros2 launch imdl_nav robot.launch.py sim:=true use_sim_time:=true
+# PC, terminal 2
+ros2 launch imdl_nav rviz.launch.py use_sim_time:=true
+# PC, terminal 3 – robot at its spawn point
+ros2 launch imdl_nav navigation.launch.py map:=$HOME/maps/sim_map.yaml use_sim_time:=true
+# PC, terminal 4
+ros2 run imdl_nav go_to 1.0 0.5 90
+```
