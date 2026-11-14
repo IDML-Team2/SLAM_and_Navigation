@@ -8,7 +8,7 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
 # Build the workspace (imdl_nav_ws, mounted as /nav_ws) and source it.
 nav_build() {
-    (cd /nav_ws && colcon build --symlink-install --packages-select imdl_nav "$@") \
+    (cd /nav_ws && colcon build --symlink-install --packages-select imdl_nav explore_lite_msgs explore_lite "$@") \
         && source /nav_ws/install/setup.bash
 }
 

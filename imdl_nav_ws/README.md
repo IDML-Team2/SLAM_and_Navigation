@@ -63,6 +63,35 @@ ros2 run imdl_nav go_to 1.0 0.5 90          # x [m], y [m], heading [degrees]
 ros2 run imdl_nav waypoints                 # points from config/waypoints.yaml
 ```
 
+## Explore automatically
+
+The robot builds the map on its own: `explore_lite` keeps sending Nav2 goals to
+unexplored areas (frontiers) and drives back to its start pose when none are left.
+`slam:=true` starts Nav2 without `map_server`/`amcl`, slam_toolbox provides map and pose.
+
+```bash
+# Jetson, terminal 1
+ros2 launch imdl_nav mapping.launch.py
+# PC, terminal 1
+ros2 launch imdl_nav rviz.launch.py
+# PC, terminal 2
+ros2 launch imdl_nav navigation.launch.py slam:=true
+# PC, terminal 3 – starts exploring right away
+ros2 launch explore_lite explore.launch.py use_sim_time:=false
+# PC, terminal 4, when "Returning to initial pose." shows up (SLAM still running!)
+ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map --free 0.196 --ros-args -p save_map_timeout:=20.0
+```
+
+Pause / continue exploring:
+
+```bash
+ros2 topic pub --once /explore/resume std_msgs/Bool "data: false"   # pause
+ros2 topic pub --once /explore/resume std_msgs/Bool "data: true"    # continue
+```
+
+Parameters (e.g. `min_frontier_size`, `return_to_init`):
+`src/m-explore-ros2/explore/config/params.yaml`.
+
 ## Simulation
 
 Everything runs on the PC, no Jetson. The simulator must publish `/clock`,
@@ -73,6 +102,7 @@ Everything runs on the PC, no Jetson. The simulator must publish `/clock`,
 | `sim:=true` | `robot.launch.py`, `mapping.launch.py` | no lidar driver, the simulator publishes `/scan` |
 | `use_sim_time:=true` | all launch files | use the simulator clock |
 | `namespace:=/<ns>` | `robot`, `mapping`, `navigation` | only if the simulated robot's namespace is not the one in `robot.yaml` |
+| `slam:=true` | `navigation.launch.py` | navigate while mapping (no `map_server`/`amcl`), for exploring |
 
 Build a map:
 
@@ -98,4 +128,19 @@ ros2 launch imdl_nav rviz.launch.py use_sim_time:=true
 ros2 launch imdl_nav navigation.launch.py map:=$HOME/maps/sim_map.yaml use_sim_time:=true
 # PC, terminal 4
 ros2 run imdl_nav go_to 1.0 0.5 90
+```
+
+Explore automatically:
+
+```bash
+# PC, terminal 1 – simulator running
+ros2 launch imdl_nav mapping.launch.py sim:=true use_sim_time:=true
+# PC, terminal 2
+ros2 launch imdl_nav rviz.launch.py use_sim_time:=true
+# PC, terminal 3
+ros2 launch imdl_nav navigation.launch.py slam:=true use_sim_time:=true
+# PC, terminal 4 – starts exploring right away
+ros2 launch explore_lite explore.launch.py use_sim_time:=true
+# PC, terminal 5, when "Returning to initial pose." shows up (SLAM still running!)
+ros2 run nav2_map_server map_saver_cli -f ~/maps/sim_map --free 0.196 --ros-args -p save_map_timeout:=20.0 -p use_sim_time:=true
 ```

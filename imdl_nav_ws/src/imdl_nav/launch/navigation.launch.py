@@ -4,6 +4,13 @@
 
 Requires robot.launch.py running on the Jetson (NOT mapping.launch.py).
 
+Navigate while mapping (e.g. for explore_lite):
+
+    ros2 launch imdl_nav navigation.launch.py slam:=true
+
+Requires mapping.launch.py instead: slam_toolbox provides /map and TF map -> odom,
+so map_server and amcl are not started (map:= and initial_* are ignored).
+
 Starts:
     map_server          map from disk                    -> /map
     amcl                localization                     -> TF map -> odom, /amcl_pose
@@ -108,21 +115,33 @@ def nodes(context):
             float(LaunchConfiguration('initial_yaw').perform(context))),
     }
 
+    slam = LaunchConfiguration('slam').perform(context) == 'true'
+
     lifecycle_nodes = [
         'map_server', 'amcl', 'planner_server', 'controller_server',
         'behavior_server', 'velocity_smoother', 'bt_navigator',
     ]
 
-    return [
-        LogInfo(msg=f'Robot namespace: {namespace} (odometry {namespace}/odom, '
-                    f'commands {namespace}/cmd_vel)'),
-        LogInfo(msg=summary),
+    # With SLAM, slam_toolbox provides /map and TF map -> odom instead.
+    localization = [
         Node(package='nav2_map_server', executable='map_server', name='map_server',
              parameters=[params, {'yaml_filename': LaunchConfiguration('map')}, sim_time],
              output='screen'),
         Node(package='nav2_amcl', executable='amcl', name='amcl',
              parameters=[params, initial_pose, sim_time],
              output='screen'),
+    ]
+    if slam:
+        lifecycle_nodes = lifecycle_nodes[2:]
+        localization = []
+
+    return [
+        LogInfo(msg=f'Robot namespace: {namespace} (odometry {namespace}/odom, '
+                    f'commands {namespace}/cmd_vel)'),
+        LogInfo(msg=summary),
+        LogInfo(msg='Mode: SLAM (map and localization from slam_toolbox)' if slam
+                else 'Mode: saved map (map_server + amcl)'),
+        *localization,
         Node(package='nav2_planner', executable='planner_server', name='planner_server',
              parameters=[params, sim_time],
              output='screen'),
@@ -166,5 +185,9 @@ def generate_launch_description():
             'initial_yaw', default_value='0.0', description='Start heading (degrees).'),
         DeclareLaunchArgument(
             'use_sim_time', default_value='false', description='Use the simulator clock (/clock).'),
+        DeclareLaunchArgument(
+            'slam', default_value='false',
+            description='true: map and localization from slam_toolbox (mapping.launch.py), '
+                        'no map_server/amcl.'),
         OpaqueFunction(function=nodes),
     ])
