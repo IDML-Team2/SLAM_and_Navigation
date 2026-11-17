@@ -76,10 +76,10 @@ ros2 launch imdl_nav mapping.launch.py
 ros2 launch imdl_nav rviz.launch.py
 # PC, terminal 2
 ros2 launch imdl_nav navigation.launch.py slam:=true
-# PC, terminal 3 – starts exploring right away
+# PC, terminal 3 – saves the map when exploration is complete
+ros2 run imdl_nav save_on_complete --ros-args -p map:=~/maps/my_map
+# PC, terminal 4 – starts exploring right away
 ros2 launch explore_lite explore.launch.py use_sim_time:=false
-# PC, terminal 4, when "Returning to initial pose." shows up (SLAM still running!)
-ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map --free 0.196 --ros-args -p save_map_timeout:=20.0
 ```
 
 Pause / continue exploring:
@@ -139,8 +139,8 @@ ros2 launch imdl_nav mapping.launch.py sim:=true use_sim_time:=true
 ros2 launch imdl_nav rviz.launch.py use_sim_time:=true
 # PC, terminal 3
 ros2 launch imdl_nav navigation.launch.py slam:=true use_sim_time:=true
-# PC, terminal 4 – starts exploring right away
+# PC, terminal 4 – saves the map when exploration is complete
+ros2 run imdl_nav save_on_complete --ros-args -p map:=~/maps/sim_map -p use_sim_time:=true
+# PC, terminal 5 – starts exploring right away
 ros2 launch explore_lite explore.launch.py use_sim_time:=true
-# PC, terminal 5, when "Returning to initial pose." shows up (SLAM still running!)
-ros2 run nav2_map_server map_saver_cli -f ~/maps/sim_map --free 0.196 --ros-args -p save_map_timeout:=20.0 -p use_sim_time:=true
 ```

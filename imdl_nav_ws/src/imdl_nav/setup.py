@@ -31,6 +31,7 @@ setup(
             'scan_restamper = imdl_nav.scan_restamper:main',
             'go_to = imdl_nav.go_to:main',
             'waypoints = imdl_nav.waypoints:main',
+            'save_on_complete = imdl_nav.save_on_complete:main',
         ],
     },
 )
