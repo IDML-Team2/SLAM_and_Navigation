@@ -7,6 +7,8 @@ Starts:
     scan_restamper     fix time stamps            /scan_raw -> /scan
     odom_to_tf         odometry as TF             <namespace>/odom -> TF odom -> base_link
     lidar_tf           where the lidar is mounted TF base_link -> laser (static)
+    camera_tf          where the camera is mounted TF base_link -> camera_link (static,
+                       only if robot.yaml has a 'camera' section)
 
 Started on its own for navigation, and included by mapping.launch.py for mapping.
 
@@ -33,29 +35,16 @@ def read_namespace(context, robot_config):
     return '/' + namespace.strip().strip('/')
 
 
-def robot_nodes(context):
-    with open(LaunchConfiguration('robot_config').perform(context)) as f:
-        robot_config = yaml.safe_load(f)
-    namespace = read_namespace(context, robot_config)
+def lidar_tf(robot_config):
+    """Fixed transform base_link -> laser (frame of the sllidar driver)."""
     lidar = robot_config['lidar']
     x = lidar['x_cm'] / 100.0
     y = lidar['y_cm'] / 100.0
     z = lidar['z_cm'] / 100.0
     yaw = math.radians(lidar['yaw_deg'])
-
     return [
-        LogInfo(msg=f'Robot namespace: {namespace} (odometry from {namespace}/odom)'),
         LogInfo(msg=f'Lidar mounted at x={x:.3f} m, y={y:.3f} m, z={z:.3f} m, '
                     f'yaw={lidar["yaw_deg"]} deg (from robot.yaml)'),
-        Node(
-            package='imdl_nav',
-            executable='odom_to_tf',
-            name='odom_to_tf',
-            parameters=[{'odom_topic': namespace + '/odom',
-                         'use_sim_time': LaunchConfiguration('use_sim_time')}],
-            output='screen',
-        ),
-        # Fixed transform base_link -> laser
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -66,6 +55,57 @@ def robot_nodes(context):
                 '--frame-id', 'base_link', '--child-frame-id', 'laser',
             ],
         ),
+    ]
+
+
+def camera_tf(robot_config):
+    """Fixed transform base_link -> camera frame, if robot.yaml has a 'camera' section.
+
+    The RealSense driver publishes the frames inside the camera
+    (camera_link -> camera_depth_optical_frame, ...) itself.
+    """
+    camera = robot_config.get('camera')
+    if not camera:
+        return [LogInfo(msg='No camera section in robot.yaml: no camera TF published')]
+    x = camera['x_cm'] / 100.0
+    y = camera['y_cm'] / 100.0
+    z = camera['z_cm'] / 100.0
+    yaw = math.radians(camera['yaw_deg'])
+    pitch = math.radians(camera['pitch_deg'])   # ROS: positive pitch = nose down
+    frame = camera.get('frame', 'camera_link')
+    return [
+        LogInfo(msg=f'Camera ({frame}) mounted at x={x:.3f} m, y={y:.3f} m, z={z:.3f} m, '
+                    f'yaw={camera["yaw_deg"]} deg, pitch={camera["pitch_deg"]} deg (from robot.yaml)'),
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='camera_tf',
+            arguments=[
+                '--x', str(x), '--y', str(y), '--z', str(z),
+                '--yaw', str(yaw), '--pitch', str(pitch), '--roll', '0.0',
+                '--frame-id', 'base_link', '--child-frame-id', frame,
+            ],
+        ),
+    ]
+
+
+def robot_nodes(context):
+    with open(LaunchConfiguration('robot_config').perform(context)) as f:
+        robot_config = yaml.safe_load(f)
+    namespace = read_namespace(context, robot_config)
+
+    return [
+        LogInfo(msg=f'Robot namespace: {namespace} (odometry from {namespace}/odom)'),
+        Node(
+            package='imdl_nav',
+            executable='odom_to_tf',
+            name='odom_to_tf',
+            parameters=[{'odom_topic': namespace + '/odom',
+                         'use_sim_time': LaunchConfiguration('use_sim_time')}],
+            output='screen',
+        ),
+        *lidar_tf(robot_config),
+        *camera_tf(robot_config),
     ]
 
 

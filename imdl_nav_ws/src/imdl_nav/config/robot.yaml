@@ -39,6 +39,14 @@ lidar:
   ignore_closer_than_cm: 12 # readings closer than this to the lidar are ignored by Nav2
                             # (they usually hit the robot itself, e.g. the lidar mount)
 
+camera:                     # RealSense; remove this section if no camera is mounted
+  frame: camera_link        # root frame of the RealSense driver (default 'camera_link')
+  x_cm: 10.0                # TODO measure: center of the camera in front of (+) / behind (-) the robot center
+  y_cm: 0.0                 # TODO measure: left (+) / right (-) of the robot center
+  z_cm: 20.0                # TODO measure: height of the camera above the floor
+  yaw_deg: 0.0              # where the camera looks: 0 = forward, 180 = backward, 90 = left
+  pitch_deg: 0.0            # tilt: positive = looking DOWN toward the floor
+
 robot:
   radius_cm: 17.1           # Create3 body: 34.2 cm diameter
   footprint_cm: []          # OPTIONAL: outline of the robot, if parts stick out of the

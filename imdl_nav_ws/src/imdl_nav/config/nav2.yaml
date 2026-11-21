@@ -82,9 +82,9 @@ global_costmap:
       static_layer:              # the saved map
         plugin: nav2_costmap_2d::StaticLayer
         map_subscribe_transient_local: true
-      obstacle_layer:            # what the lidar currently sees
+      obstacle_layer:            # what the lidar and camera currently see
         plugin: nav2_costmap_2d::ObstacleLayer
-        observation_sources: scan
+        observation_sources: scan camera
         scan:
           topic: /scan
           data_type: LaserScan
@@ -94,6 +94,15 @@ global_costmap:
           obstacle_max_range: 2.5
           raytrace_max_range: 3.0
           # obstacle_min_range, raytrace_min_range: set from robot.yaml (lidar.ignore_closer_than_cm)
+        camera:                  # RealSense point cloud
+          topic: /camera/camera/depth/color/points   # TODO: check with: ros2 topic list | grep points
+          data_type: PointCloud2
+          marking: true
+          clearing: true
+          min_obstacle_height: 0.05  # ignore the floor
+          max_obstacle_height: 1.0
+          obstacle_max_range: 2.0
+          raytrace_max_range: 2.5
       inflation_layer:           # safety margin around obstacles
         plugin: nav2_costmap_2d::InflationLayer
         # inflation_radius, cost_scaling_factor: set from robot.yaml (section navigation)
@@ -120,7 +129,7 @@ local_costmap:
       plugins: [obstacle_layer, inflation_layer]
       obstacle_layer:
         plugin: nav2_costmap_2d::ObstacleLayer
-        observation_sources: scan
+        observation_sources: scan camera
         scan:
           topic: /scan
           data_type: LaserScan
@@ -130,6 +139,15 @@ local_costmap:
           obstacle_max_range: 2.5
           raytrace_max_range: 3.0
           # obstacle_min_range, raytrace_min_range: set from robot.yaml (lidar.ignore_closer_than_cm)
+        camera:
+          topic: /camera/camera/depth/color/points   # TODO: check with: ros2 topic list | grep points
+          data_type: PointCloud2
+          marking: true
+          clearing: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.0
+          obstacle_max_range: 2.0
+          raytrace_max_range: 2.5
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         # inflation_radius, cost_scaling_factor: set from robot.yaml (section navigation)
