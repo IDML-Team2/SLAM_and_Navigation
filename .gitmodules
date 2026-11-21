@@ -1,3 +1,0 @@
-[submodule "imdl_nav_ws/src/m-explore-ros2"]
-	path = imdl_nav_ws/src/m-explore-ros2
-	url = https://github.com/robo-friends/m-explore-ros2.git
