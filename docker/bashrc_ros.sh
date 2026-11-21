@@ -12,11 +12,6 @@ nav_build() {
         && source /nav_ws/install/setup.bash
 }
 
-# Notebooks; open the printed http://127.0.0.1:8888/... link in the browser on the PC.
-nav_notebooks() {
-    jupyter notebook --allow-root --no-browser --ip=127.0.0.1 --notebook-dir=/nav_ws/notebooks "$@"
-}
-
 if [ -f /nav_ws/install/setup.bash ]; then
     source /nav_ws/install/setup.bash
 else
